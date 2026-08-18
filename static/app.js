@@ -47,5 +47,45 @@ $('#search').addEventListener('input',render); $('#roomSelect').addEventListener
 $('#eventSelect').addEventListener('change',e=>{ const opt=e.target.selectedOptions[0]; state.event=opt.value?{id:+opt.value,name:opt.textContent.split(' · ')[0],event_date:opt.textContent.split(' · ')[1]}:null;loadStudents(); });
 document.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>modal(x.dataset.close,false));
 document.querySelectorAll('.modal-backdrop').forEach(x=>x.addEventListener('click',e=>{if(e.target===x)modal(x.id,false)}));
-$('#markAll').onclick=async()=>{if(!state.event){toast('สร้างหรือเลือกกิจกรรมก่อน');return}const pending=state.students.filter(s=>!s.status);if(!pending.length){toast('เช็กชื่อครบแล้ว');return}if(!confirm(`ทำเครื่องหมาย “มา” ให้ ${pending.length} คน?`))return;try{await Promise.all(pending.map(s=>api('/api/attendance',{method:'POST',body:JSON.stringify({student_id:s.id,event_id:state.event.id,status:'present'})})));pending.forEach(s=>s.status='present');render();toast('บันทึกว่ามาครบแล้ว');}catch(e){toast(e.message)}};
+$('#markAll').onclick = async () => {
+  if (!state.event) { 
+    Swal.fire('แจ้งเตือน', 'กรุณาสร้างหรือเลือกกิจกรรมก่อนเริ่มเช็กชื่อ', 'warning'); 
+    return; 
+  }
+  const pending = state.students.filter(s => !s.status);
+  if (!pending.length) { 
+    Swal.fire('ยอดเยี่ยม!', 'เช็กชื่อครบหมดแล้วทุกคน', 'success'); 
+    return; 
+  }
+
+  // Popup ยืนยันแบบสวยๆ
+  const confirmResult = await Swal.fire({
+    title: 'ยืนยันการเช็กชื่อ?',
+    text: `ต้องการทำเครื่องหมาย "มา" ให้กับนักเรียนที่เหลือ ${pending.length} คน ใช่หรือไม่?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#19222e', // สีดำเข้มแบบปุ่มหลัก
+    cancelButtonColor: '#ff6975', // สีแดง
+    confirmButtonText: 'ยืนยัน (มาทุกคน)',
+    cancelButtonText: 'ยกเลิก'
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  try {
+    await Promise.all(pending.map(s => api('/api/attendance', { method: 'POST', body: JSON.stringify({ student_id: s.id, event_id: state.event.id, status: 'present' }) })));
+    pending.forEach(s => s.status = 'present');
+    render();
+    // Popup ตอนสำเร็จ
+    Swal.fire({
+      title: 'บันทึกสำเร็จ!',
+      text: 'ทำเครื่องหมายว่ามาครบทุกคนแล้ว',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (e) {
+    Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+  }
+};
 bootstrap().catch(e=>toast(e.message));

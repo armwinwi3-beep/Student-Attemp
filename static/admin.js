@@ -74,7 +74,7 @@ $('#eventForm').addEventListener('submit', async event => {
     if (editingEventId) await api(`/api/admin/events/${editingEventId}`, {method:'PATCH', body});
     else await api('/api/events', {method:'POST', body});
     eventModal(false); await init(); await loadEventManager();
-  } catch (error) { alert(error.message); } finally { button.disabled = false; }
+  } catch (error) { Swal.fire('เกิดข้อผิดพลาด', error.message, 'error'); } finally { button.disabled = false; }
 });
 $('#eventList').addEventListener('click', async event => {
   const button = event.target.closest('[data-event-action]'); if (!button) return;
@@ -92,8 +92,8 @@ $('#roomForm').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.submitter; button.disabled = true; button.textContent = 'กำลังซิงก์…';
   try {
     const result = await api('/api/admin/rooms', {method:'POST', body:JSON.stringify({sheet_url:$('#sourceUrl').value, gid:$('#sourceGid').value})});
-    roomModal(false); $('#roomForm').reset(); $('#sourceGid').value = '0'; await loadRooms(); alert(`บันทึกแล้ว: ซิงก์ ${result.count} รายชื่อ`);
-  } catch (error) { alert(error.message); } finally { button.disabled = false; button.textContent = 'บันทึกและซิงก์รายชื่อ →'; }
+    roomModal(false); $('#roomForm').reset(); $('#sourceGid').value = '0'; await loadRooms(); Swal.fire('สำเร็จ!', `บันทึกและซิงก์ข้อมูล ${result.count} รายชื่อเรียบร้อย`, 'success');
+  } catch (error) { Swal.fire('ซิงก์ไม่สำเร็จ', error.message, 'error'); } finally { button.disabled = false; button.textContent = 'บันทึกและซิงก์รายชื่อ →'; }
 });
 $('#roomSources').addEventListener('click', async event => {
   const button = event.target.closest('[data-action]'); if (!button) return;
