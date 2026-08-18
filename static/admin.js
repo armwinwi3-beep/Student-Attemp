@@ -91,7 +91,7 @@ $('#roomModal').addEventListener('click', event => { if (event.target.id === 'ro
 $('#roomForm').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.submitter; button.disabled = true; button.textContent = 'กำลังซิงก์…';
   try {
-    const result = await api('/api/admin/rooms', {method:'POST', body:JSON.stringify({room:$('#sourceRoom').value, sheet_url:$('#sourceUrl').value, gid:$('#sourceGid').value})});
+    const result = await api('/api/admin/rooms', {method:'POST', body:JSON.stringify({sheet_url:$('#sourceUrl').value, gid:$('#sourceGid').value})});
     roomModal(false); $('#roomForm').reset(); $('#sourceGid').value = '0'; await loadRooms(); alert(`บันทึกแล้ว: ซิงก์ ${result.count} รายชื่อ`);
   } catch (error) { alert(error.message); } finally { button.disabled = false; button.textContent = 'บันทึกและซิงก์รายชื่อ →'; }
 });
