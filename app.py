@@ -13,6 +13,7 @@ from flask import Flask, jsonify, render_template, request, Response, redirect, 
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = os.environ.get("DATABASE_PATH", str(BASE_DIR / "attendance.db"))
+Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 app.secret_key = os.environ.get("SECRET_KEY", "replace-this-secret-before-public-deploy")
