@@ -178,23 +178,46 @@ def admin_rooms():
 @admin_required
 def add_room_source():
     data = request.get_json(force=True)
-    room, sheet_url = data.get("room", "").strip(), data.get("sheet_url", "").strip()
+    sheet_url = data.get("sheet_url", "").strip()
     gid = str(data.get("gid", "0")).strip() or "0"
-    if not room or not sheet_url:
-        return jsonify(error="กรุณาระบุชื่อห้องและลิงก์ Google Sheet"), 400
-    con = db()
-    con.execute("""INSERT INTO room_sources(room,sheet_url,gid,updated_at) VALUES (?,?,?,?)
-        ON CONFLICT(room) DO UPDATE SET sheet_url=excluded.sheet_url,gid=excluded.gid,updated_at=excluded.updated_at""",
-        (room, sheet_url, gid, datetime.now().isoformat(timespec="seconds")))
-    source = con.execute("SELECT * FROM room_sources WHERE room=?", (room,)).fetchone()
-    con.commit(); con.close()
+    
+    if not sheet_url:
+        return jsonify(error="กรุณาระบุลิงก์ Google Sheet"), 400
+        
     try:
+        # 1. โหลดข้อมูลจากชีตเพื่อค้นหาชื่อห้องก่อน
+        with urlopen(google_csv_url(sheet_url, gid), timeout=20) as response:
+            content = response.read().decode("utf-8-sig")
+        rows = list(csv.DictReader(io.StringIO(content)))
+        
+        if not rows:
+            return jsonify(error="ไม่พบข้อมูลในชีต"), 400
+            
+        # 2. ค้นหาชื่อห้องจากแถวแรกที่มีข้อมูล
+        room = None
+        for row in rows:
+            room = normalized(row, "ห้อง", "ชั้น", "room", "class")
+            if room: 
+                break
+                
+        if not room:
+            return jsonify(error="ไม่พบคอลัมน์ 'ห้อง' หรือไม่มีข้อมูลในชีต"), 400
+            
+        # 3. บันทึกข้อมูลแหล่งที่มาของห้องลง Database
+        con = db()
+        con.execute("""INSERT INTO room_sources(room,sheet_url,gid,updated_at) VALUES (?,?,?,?)
+            ON CONFLICT(room) DO UPDATE SET sheet_url=excluded.sheet_url,gid=excluded.gid,updated_at=excluded.updated_at""",
+            (room, sheet_url, gid, datetime.now().isoformat(timespec="seconds")))
+        source = con.execute("SELECT * FROM room_sources WHERE room=?", (room,)).fetchone()
+        con.commit()
+        con.close()
+        
+        # 4. ซิงก์รายชื่อนักเรียนเข้าสู่ระบบ
         count = sync_roster(sheet_url, gid, room, source["id"])
         return jsonify(ok=True, count=count, room=dict(source))
+        
     except (HTTPError, URLError, ValueError) as err:
-        return jsonify(error=f"บันทึกห้องแล้ว แต่ซิงก์ไม่สำเร็จ: {err}"), 400
-
-
+        return jsonify(error=f"ซิงก์ข้อมูลไม่สำเร็จ: {err}"), 400
 @app.post("/api/admin/rooms/<int:source_id>/sync")
 @admin_required
 def sync_room_source(source_id):
