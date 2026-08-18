@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: student-checkin
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 2 --threads 4 --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DATABASE_PATH
+        value: /var/data/attendance.db
+      - key: SHEET_URL
+        sync: false
+      - key: SHEET_GID
+        value: "0"
+    disk:
+      name: sqlite-data
+      mountPath: /var/data
+      sizeGB: 1

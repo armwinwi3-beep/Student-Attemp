@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Checkin Club — เช็กชื่อนักเรียน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-enhancements.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='room-selector.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='contrast-fix.css') }}">
+</head>
+<body>
+  <div class="orb orb-a"></div><div class="orb orb-b"></div>
+  <main>
+    <header class="app-header"><a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a><div class="header-actions"><span class="room-badge">ห้องเรียนพร้อมใช้</span><a class="report-link" href="/admin"><b>▦</b> รายงานแอดมิน</a></div></header>
+    <section class="hero">
+      <p class="eyebrow">STUDENT ACTIVITY · ATTENDANCE</p>
+      <h1>เช็กชื่อให้ไว<br><em>ทุกคนอยู่ครบ</em></h1>
+      <p class="intro">เลือกกิจกรรม เลือกห้อง แล้วแตะสถานะของนักเรียนได้ทันที <a href="/admin">จัดการรายชื่อและห้องเรียนที่หน้าแอดมิน →</a></p>
+    </section>
+    <section class="control card">
+      <div class="field event-field"><label>กิจกรรม</label><div class="event-row"><select id="eventSelect"><option value="">— เลือกกิจกรรม —</option></select></div></div>
+      <div class="field"><label>ห้องเรียน</label><select id="roomSelect"><option value="">ทุกห้อง</option></select></div>
+      <div class="field search"><label>ค้นหารายชื่อ</label><input id="search" placeholder="พิมพ์ชื่อหรือเลขที่…"></div>
+    </section>
+    <section class="toolbar">
+      <div><span id="rosterCount">0 รายชื่อ</span><span class="dot">·</span><span id="eventHint">เลือกกิจกรรมเพื่อเริ่มเช็กชื่อ</span></div>
+      <div class="actions"><button class="outline" id="markAll">✓ ทุกคนมา</button><a class="outline disabled" id="download">⇩ รายงาน CSV</a></div>
+    </section>
+    <section class="summary" id="summary"><div class="metric present"><b>0</b><small>มา</small></div><div class="metric late"><b>0</b><small>สาย</small></div><div class="metric absent"><b>0</b><small>ขาด</small></div><div class="metric unmarked"><b>0</b><small>รอเช็ก</small></div></section>
+    <section class="students" id="students"><div class="empty"><strong>ยังไม่มีห้องเรียน</strong><span>ให้ผู้ดูแลเพิ่มห้องและเชื่อม Google Sheet ในหน้าแอดมิน</span></div></section>
+  </main>
+  <div id="toast"></div><script src="{{ url_for('static', filename='app.js', v='20260818-9') }}"></script>
+</body></html>

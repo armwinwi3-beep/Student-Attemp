@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>เข้าสู่ระบบผู้ดูแล — Checkin Club</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}"></head>
+<body><main><a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a><section class="login-card"><div class="lock">⌁</div><p class="eyebrow">ADMIN AREA</p><h1>เฉพาะผู้ดูแล</h1><p class="sub">กรอกรหัสผ่าน 4 หลักเพื่อดูรายงานการเข้าร่วมกิจกรรม</p><form method="post"><label>รหัสผ่านผู้ดูแล<input name="pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autofocus required placeholder="• • • •"></label>{% if error %}<p class="error">{{ error }}</p>{% endif %}<button>เข้าสู่หน้ารายงาน <span>→</span></button></form><a class="return" href="/">← กลับหน้าเช็กชื่อ</a></section></main></body>
+</html>

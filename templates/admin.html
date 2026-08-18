@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>รายงานผู้ดูแล — Checkin Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='admin-enhancements.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='room-manager.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='event-manager.css') }}">
+</head>
+<body>
+  <main>
+    <header><a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a><div class="nav"><a class="back" href="/">← หน้าเช็กชื่อ</a><form action="/admin/logout" method="post"><button class="logout">ออกจากระบบ</button></form></div></header>
+    <section class="intro"><p class="eyebrow">ADMIN CONSOLE · ACTIVITY REPORT</p><h1>ภาพรวมการ<br><em>เข้าร่วมกิจกรรม</em></h1><p>สรุปจำนวนและอัตราการเข้าร่วมแยกตามห้องเรียน</p></section>
+    <section class="chooser"><div><label for="eventSelect">เลือกกิจกรรมที่ต้องการดู</label><select id="eventSelect"><option value="">กำลังโหลดกิจกรรม…</option></select></div><a id="download" class="download disabled">⇩ ดาวน์โหลดรายชื่อ CSV</a></section>
+    <section class="event-manager"><div class="manager-title"><div><p class="eyebrow">ACTIVITY MANAGEMENT</p><h2>จัดการกิจกรรม</h2><p>เพิ่ม แก้ไข หรือลบกิจกรรมจากที่เดียว หน้าเช็กชื่อจะเลือกได้อย่างเดียว</p></div><button id="addEvent">＋ เพิ่มกิจกรรม</button></div><div id="eventList" class="event-list"></div></section>
+    <section class="source-manager"><div class="source-head"><div><p class="eyebrow">ROSTER SOURCES</p><h2>ห้องเรียนและชีตรายชื่อ</h2><p>เชื่อม Google Sheet แยกตามห้อง ระบบจะจำรายการนี้ไว้และแสดงเป็นตัวเลือกหน้าเช็กชื่อ</p></div><button id="addRoom">＋ เพิ่มห้องเรียน</button></div><div id="roomSources" class="source-list"><p class="source-empty">กำลังโหลดห้องเรียน…</p></div></section>
+    <section id="empty" class="empty">ยังไม่มีกิจกรรมให้แสดงผล</section>
+    <div id="report" hidden>
+      <section class="headline"><div><span id="eventName"></span><small id="eventDate"></small></div><div class="overall"><span>เข้าร่วมกิจกรรมรวม</span><b id="overallPercent">0%</b><small>มา + สาย</small></div></section>
+      <section class="metrics"><article class="total"><small>นักเรียนทั้งหมด</small><b id="total">0</b><span>คน</span></article><article class="green"><small>มา</small><b id="present">0%</b><span id="presentCount">0 คน</span></article><article class="orange"><small>มาสาย</small><b id="late">0%</b><span id="lateCount">0 คน</span></article><article class="red"><small>ขาด</small><b id="absent">0%</b><span id="absentCount">0 คน</span></article><article class="gray"><small>ยังไม่เช็ก</small><b id="unmarked">0%</b><span id="unmarkedCount">0 คน</span></article></section>
+      <section class="table-card"><div class="table-title"><h2>สรุปแยกตามห้อง</h2><span>ตัวเลขในวงเล็บคือเปอร์เซ็นต์ของนักเรียนในห้อง</span></div><div class="table-wrap"><table><thead><tr><th>ห้องเรียน</th><th>เข้าร่วม</th><th>มา</th><th>สาย</th><th>ขาด</th><th>รอเช็ก</th><th>อัตราเข้าร่วม</th></tr></thead><tbody id="rooms"></tbody></table></div></section>
+    </div>
+  </main><div id="eventModal" class="room-modal"><form id="eventForm" class="room-form"><button type="button" class="modal-close" id="closeEventModal">×</button><p class="eyebrow">ACTIVITY SETTINGS</p><h2 id="eventModalTitle">เพิ่มกิจกรรม</h2><p>กิจกรรมที่สร้างจะปรากฏในหน้าเช็กชื่อทันที</p><label>ชื่อกิจกรรม<input id="eventName" name="event_name" required placeholder="เช่น กิจกรรมหน้าเสาธง"></label><label>วันที่จัดกิจกรรม<input id="eventDate" name="event_date" type="date" required></label><button class="save-room" id="saveEvent">บันทึกกิจกรรม →</button></form></div><div id="roomModal" class="room-modal"><form id="roomForm" class="room-form"><button type="button" class="modal-close" id="closeRoomModal">×</button><p class="eyebrow">ADD ROOM SOURCE</p><h2>เพิ่มห้องเรียน</h2><p>ชื่อห้องที่กรอกจะเป็นชื่อใน dropdown หน้าเช็กชื่อ</p><label>ชื่อห้องเรียน<input id="sourceRoom" required placeholder="เช่น ม.4/1"></label><label>ลิงก์ Google Sheet<input id="sourceUrl" type="url" required placeholder="https://docs.google.com/spreadsheets/d/…"></label><label>GID ของแท็บชีต <small>(ปกติ 0)</small><input id="sourceGid" value="0"></label><div class="source-tip">ตั้งค่าชีตเป็น “ทุกคนที่มีลิงก์ดูได้” ก่อนบันทึก</div><button class="save-room">บันทึกและซิงก์รายชื่อ →</button></form></div><script src="{{ url_for('static', filename='admin.js', v='20260818-8') }}"></script>
+</body></html>
