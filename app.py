@@ -70,6 +70,11 @@ def init_db():
             updated_at VARCHAR NOT NULL
         );
     """)
+    # เติมโค้ด 4 บรรทัดนี้เข้าไป เพื่อเพิ่มคอลัมน์ GPS และ OTP
+    cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS lat FLOAT;")
+    cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS lng FLOAT;")
+    cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS radius INTEGER DEFAULT 100;")
+    cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS otp VARCHAR;")
     conn.commit()
     conn.close()
 
@@ -223,6 +228,7 @@ def sync_room_source(source_id):
     except (HTTPError, URLError, ValueError) as err:
         return jsonify(error=str(err)), 400
 
+
 @app.delete("/api/admin/rooms/<int:source_id>")
 @admin_required
 def delete_room_source(source_id):
@@ -328,31 +334,51 @@ def admin_report():
 @admin_required
 def create_event():
     data = request.get_json(force=True)
-    if not data.get("name", "").strip() or not data.get("event_date"):
+    name = data.get("name", "").strip()
+    event_date = data.get("event_date")
+    otp = data.get("otp", "").strip()
+    lat, lng = data.get("lat"), data.get("lng")
+    radius = data.get("radius", 100)
+
+    if not name or not event_date:
         return jsonify(error="กรุณาระบุชื่อกิจกรรมและวันที่"), 400
-    return jsonify(get_or_create_event(data["name"], data["event_date"]))
+
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute("""INSERT INTO events(name, event_date, otp, lat, lng, radius) 
+                       VALUES (%s,%s,%s,%s,%s,%s) RETURNING *""", 
+                    (name, event_date, otp, lat, lng, radius))
+        event = cur.fetchone()
+        conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        return jsonify(error="มีกิจกรรมชื่อนี้ในวันที่เลือกแล้ว"), 400
+    finally:
+        conn.close()
+    return jsonify(dict(event))
 
 @app.patch("/api/admin/events/<int:event_id>")
 @admin_required
 def update_event(event_id):
     data = request.get_json(force=True)
-    name, event_date = data.get("name", "").strip(), data.get("event_date", "")
+    name = data.get("name", "").strip()
+    event_date = data.get("event_date")
+    otp = data.get("otp", "").strip()
+    lat, lng = data.get("lat"), data.get("lng")
+    radius = data.get("radius", 100)
+    
     if not name or not event_date: return jsonify(error="กรุณาระบุชื่อกิจกรรมและวันที่"), 400
     
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT id FROM events WHERE id=%s", (event_id,))
-    if not cur.fetchone(): conn.close(); return jsonify(error="ไม่พบกิจกรรม"), 404
-    
-    cur.execute("SELECT id FROM events WHERE name=%s AND event_date=%s AND id<>%s", (name, event_date, event_id))
-    if cur.fetchone(): conn.close(); return jsonify(error="มีกิจกรรมชื่อนี้ในวันที่เลือกแล้ว"), 400
-    
-    cur.execute("UPDATE events SET name=%s, event_date=%s WHERE id=%s", (name, event_date, event_id))
-    cur.execute("SELECT * FROM events WHERE id=%s", (event_id,))
+    cur.execute("UPDATE events SET name=%s, event_date=%s, otp=%s, lat=%s, lng=%s, radius=%s WHERE id=%s RETURNING *", 
+                (name, event_date, otp, lat, lng, radius, event_id))
     event = cur.fetchone()
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
+    if not event: return jsonify(error="ไม่พบกิจกรรม"), 404
     return jsonify(dict(event))
-
 @app.delete("/api/admin/events/<int:event_id>")
 @admin_required
 def delete_event(event_id):
@@ -424,6 +450,37 @@ def report():
 
 if os.environ.get("DATABASE_URL"):
     init_db()
+@app.route("/student")
+def student_login_page():
+    return render_template("student_login.html")
 
+@app.post("/api/student/login")
+def student_login_api():
+    data = request.get_json(force=True)
+    student_id = data.get("student_id")
+    pin = data.get("pin")
+    
+    if not student_id or not pin:
+        return jsonify(error="กรุณากรอกข้อมูลให้ครบถ้วน"), 400
+
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM students WHERE id=%s", (student_id,))
+    student = cur.fetchone()
+    conn.close()
+
+    if not student:
+        return jsonify(error="ไม่พบข้อมูลนักเรียน"), 404
+
+    # เช็ครหัส 4 ตัวท้ายของ student_code (หรือถ้าสั้นกว่า 4 ตัวก็เทียบตรงๆ)
+    actual_code = str(student["student_code"])
+    last_4_digits = actual_code[-4:] if len(actual_code) >= 4 else actual_code
+    
+    if pin == last_4_digits:
+        session["student_id"] = student["id"]
+        session["student_name"] = student["full_name"]
+        return jsonify(ok=True)
+        
+    return jsonify(error="รหัส 4 ตัวท้ายไม่ถูกต้อง"), 401
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

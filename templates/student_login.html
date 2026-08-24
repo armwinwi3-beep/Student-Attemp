@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>นักเรียนเข้าสู่ระบบ — Checkin Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    /* ปรับแต่งเพิ่มเติมให้เหมาะกับฟอร์มนักเรียน */
+    .login-card select {
+      width: 100%;
+      margin-top: 7px;
+      border: 1px solid #dce3e8;
+      border-radius: 10px;
+      background: #fff;
+      padding: 13px 15px;
+      font: 500 15px 'Noto Sans Thai', sans-serif;
+      outline-color: var(--blue);
+    }
+    .login-card select:disabled { background: #f4f6f8; color: #a1abb5; }
+    .mt-3 { margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a>
+    <section class="login-card">
+      <div class="lock">🎓</div>
+      <p class="eyebrow">STUDENT PORTAL</p>
+      <h1>เข้าสู่ระบบ</h1>
+      <p class="sub">เลือกห้องเรียน ชื่อของตนเอง และกรอกเลขรหัสประจำตัว 4 ตัวท้ายเพื่อยืนยันตัวตน</p>
+      
+      <form id="studentForm">
+        <label>ห้องเรียน
+          <select id="roomSelect" required>
+            <option value="">— กำลังโหลดห้องเรียน —</option>
+          </select>
+        </label>
+        
+        <label class="mt-3">ชื่อ-นามสกุล
+          <select id="studentSelect" required disabled>
+            <option value="">— กรุณาเลือกห้องเรียนก่อน —</option>
+          </select>
+        </label>
+        
+        <label class="mt-3">รหัสผ่าน <small>(เลข 4 ตัวท้ายของรหัสนักเรียน)</small>
+          <input id="studentPin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required placeholder="• • • •">
+        </label>
+        
+        <button type="submit">ยืนยันตัวตน <span>→</span></button>
+      </form>
+    </section>
+  </main>
+  
+  <script src="{{ url_for('static', filename='student_login.js') }}"></script>
+</body>
+</html>

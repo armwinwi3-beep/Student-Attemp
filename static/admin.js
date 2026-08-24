@@ -57,6 +57,14 @@ function prepareEvent(event = null) {
   $('#eventModalTitle').textContent = event ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม';
   $('#eventName').value = event?.name || '';
   $('#eventDate').value = event?.event_date || new Date().toISOString().slice(0, 10);
+  
+  // -- ส่วนที่เพิ่มเข้ามาใหม่ --
+  $('#eventOtp').value = event?.otp || '';
+  $('#eventLat').value = event?.lat || '';
+  $('#eventLng').value = event?.lng || '';
+  $('#eventRadius').value = event?.radius || 100;
+  // -----------------------
+
   $('#saveEvent').textContent = event ? 'บันทึกการแก้ไข →' : 'บันทึกกิจกรรม →';
   eventModal(true);
 }
@@ -66,8 +74,27 @@ $('#eventModal').addEventListener('click', event => { if (event.target.id === 'e
 $('#eventForm').addEventListener('submit', async event => {
   event.preventDefault(); const button = $('#saveEvent');
   const form = event.currentTarget;
-  const payload = {name: form.elements.event_name.value.trim(), event_date: form.elements.event_date.value};
-  if (!payload.name || !payload.event_date) { alert('กรุณาระบุชื่อกิจกรรมและวันที่'); return; }
+  const payload = {
+    name: form.elements.event_name.value.trim(), 
+    event_date: form.elements.event_date.value,
+    otp: $('#eventOtp').value.trim(),
+    lat: parseFloat($('#eventLat').value) || null,
+    lng: parseFloat($('#eventLng').value) || null,
+    radius: parseInt($('#eventRadius').value) || 100
+  };
+  
+  if (!payload.name || !payload.event_date) { 
+    Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อกิจกรรมและวันที่', 'warning'); 
+    return; 
+  }
+  if (!payload.otp) {
+    Swal.fire('แจ้งเตือน', 'กรุณากำหนดรหัส OTP สำหรับกิจกรรม', 'warning'); 
+    return; 
+  }
+  if (!payload.lat || !payload.lng) {
+    Swal.fire('แจ้งเตือน', 'กรุณากดปุ่มปักหมุดพิกัด GPS ก่อนบันทึกกิจกรรม', 'warning');
+    return;
+  }
   button.disabled = true;
   const body = JSON.stringify(payload);
   try {
@@ -75,6 +102,37 @@ $('#eventForm').addEventListener('submit', async event => {
     else await api('/api/events', {method:'POST', body});
     eventModal(false); await init(); await loadEventManager();
   } catch (error) { Swal.fire('เกิดข้อผิดพลาด', error.message, 'error'); } finally { button.disabled = false; }
+});
+// สุ่มรหัส OTP 4 หลัก
+$('#randomOtpBtn').addEventListener('click', () => {
+  $('#eventOtp').value = Math.floor(1000 + Math.random() * 9000);
+});
+
+// ดึงพิกัด GPS ของแอดมิน
+$('#pinLocationBtn').addEventListener('click', () => {
+  const btn = $('#pinLocationBtn');
+  btn.textContent = 'กำลังค้นหาพิกัด...';
+  
+  if (!navigator.geolocation) {
+    Swal.fire('ข้อผิดพลาด', 'เบราว์เซอร์ของคุณไม่รองรับ GPS', 'error');
+    btn.textContent = '📍 กดเพื่อปักหมุดตำแหน่งปัจจุบัน';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      $('#eventLat').value = position.coords.latitude;
+      $('#eventLng').value = position.coords.longitude;
+      btn.textContent = '✅ ปักหมุดสำเร็จ';
+      btn.style.background = '#38a66d';
+      setTimeout(() => { btn.textContent = '📍 อัปเดตพิกัดใหม่'; btn.style.background = '#19222e'; }, 3000);
+    },
+    (error) => {
+      Swal.fire('ดึงพิกัดล้มเหลว', 'กรุณาอนุญาตให้เว็บไซต์เข้าถึงตำแหน่งที่ตั้ง (Location) ของคุณ', 'error');
+      btn.textContent = '📍 กดเพื่อปักหมุดตำแหน่งปัจจุบัน';
+    },
+    { enableHighAccuracy: true } // บังคับขอพิกัดแบบแม่นยำสูง
+  );
 });
 $('#eventList').addEventListener('click', async event => {
   const button = event.target.closest('[data-event-action]'); if (!button) return;
