@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>เช็กชื่อกิจกรรม — Checkin Club</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .mt-3 { margin-top: 15px; }
+    .student-name-box { background: #eef0ff; color: #505bc8; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 20px; border: 1px solid #dfe2ff;}
+    #getLocationBtn { background: #19222e; margin-top: 8px; border-radius: 8px; padding: 12px; width: 100%; color: white; border: none; font-weight: bold; cursor: pointer; }
+    .success-text { color: #38a66d; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; display: block; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a>
+    <section class="login-card">
+      <div class="lock" style="background:#d8ff45; color:#19222e;">📍</div>
+      <p class="eyebrow">SELF CHECK-IN</p>
+      <h1>ยืนยันการเข้าร่วม</h1>
+      
+      <div class="student-name-box">👋 สวัสดี, {{ student_name }}</div>
+      
+      <form id="checkinForm">
+        <label>รหัสผ่านกิจกรรม (OTP)
+          <input id="otpCode" inputmode="numeric" maxlength="4" required placeholder="ดูรหัสจากหน้าจอครู">
+        </label>
+        
+        <label class="mt-3">พิกัดตำแหน่งของคุณ
+          <button type="button" id="getLocationBtn">📍 กดเพื่อแชร์ตำแหน่งปัจจุบัน</button>
+          <span id="locationStatus" class="success-text" style="display:none;">✅ ดึงพิกัดสำเร็จแล้ว</span>
+        </label>
+        
+        <button type="submit" id="submitBtn" class="mt-3">บันทึกเวลาเข้าร่วม <span>→</span></button>
+      </form>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='student_checkin.js') }}"></script>
+</body>
+</html>

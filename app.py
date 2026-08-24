@@ -1,4 +1,5 @@
 import csv
+import math
 import hmac
 import io
 import os
@@ -482,5 +483,60 @@ def student_login_api():
         return jsonify(ok=True)
         
     return jsonify(error="รหัส 4 ตัวท้ายไม่ถูกต้อง"), 401
+
+# สูตรคำนวณระยะทางระหว่างพิกัด GPS 2 จุด (หน่วยเป็นเมตร)
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371000 # รัศมีโลก
+    phi_1, phi_2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0)**2 + math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+@app.route("/student/checkin")
+def student_checkin_page():
+    # ถ้ายังไม่ล็อกอิน ให้เด้งกลับไปหน้าล็อกอิน
+    if not session.get("student_id"):
+        return redirect(url_for("student_login_page"))
+    return render_template("student_checkin.html", student_name=session.get("student_name"))
+
+@app.post("/api/student/submit_checkin")
+def student_submit_checkin():
+    data = request.get_json(force=True)
+    student_id = session.get("student_id")
+    otp = data.get("otp", "").strip()
+    lat, lng = data.get("lat"), data.get("lng")
+    
+    if not student_id: return jsonify(error="กรุณาเข้าสู่ระบบก่อน"), 401
+    if not otp or lat is None or lng is None: return jsonify(error="ข้อมูลไม่ครบถ้วน หรือยังไม่ได้ดึงพิกัด GPS"), 400
+        
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # ดึงกิจกรรมของ "วันนี้" ที่รหัส OTP ตรงกัน
+    today = date.today().isoformat()
+    cur.execute("SELECT * FROM events WHERE event_date=%s AND otp=%s", (today, otp))
+    event = cur.fetchone()
+    
+    if not event:
+        conn.close(); return jsonify(error="รหัส OTP ไม่ถูกต้อง หรือไม่มีกิจกรรมในวันนี้"), 404
+        
+    # เช็คระยะทาง GPS
+    event_lat, event_lng, radius = event["lat"], event["lng"], event["radius"]
+    if event_lat and event_lng:
+        dist = calculate_distance(lat, lng, event_lat, event_lng)
+        if dist > radius:
+            conn.close()
+            return jsonify(error=f"คุณอยู่นอกพื้นที่จัดกิจกรรม (ห่าง {int(dist)} ม. / อนุญาต {radius} ม.)"), 403
+            
+    # บันทึกสถานะ "มา"
+    cur.execute("""INSERT INTO attendance(student_id,event_id,status,checked_at,note) VALUES (%s,%s,'present',%s,'เช็กชื่อด้วยตัวเอง')
+        ON CONFLICT(student_id,event_id) DO UPDATE SET status='present', checked_at=excluded.checked_at, note='เช็กชื่อด้วยตัวเอง'""",
+        (student_id, event["id"], datetime.now().isoformat(timespec="seconds")))
+    conn.commit(); conn.close()
+    
+    return jsonify(ok=True)
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
