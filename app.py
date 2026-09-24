@@ -22,7 +22,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "replace-this-secret-before-public
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
+    # Both Render and Vercel terminate HTTPS before forwarding to Flask.
+    SESSION_COOKIE_SECURE=(
+        os.environ.get("RENDER") == "true"
+        or os.environ.get("VERCEL") == "1"
+    ),
 )
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1111")
 
