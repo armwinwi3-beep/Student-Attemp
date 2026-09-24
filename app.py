@@ -1,4 +1,5 @@
 import csv
+import json
 import math
 import hmac
 import io
@@ -7,15 +8,22 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 from datetime import date, datetime
 from functools import wraps
-from urllib.parse import parse_qs, urlparse
-from urllib.request import urlopen
+from urllib.parse import parse_qs, urlparse, urlencode
+from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 from flask import Flask, jsonify, render_template, request, Response, redirect, session, url_for
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
+LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
 app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 app.secret_key = os.environ.get("SECRET_KEY", "replace-this-secret-before-public-deploy")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
+)
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1111")
 
 def admin_required(view):
@@ -69,6 +77,16 @@ def init_db():
             sheet_url VARCHAR NOT NULL,
             gid VARCHAR NOT NULL DEFAULT '0',
             updated_at VARCHAR NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS student_line_accounts (
+            id SERIAL PRIMARY KEY,
+            student_id INTEGER NOT NULL UNIQUE,
+            line_user_id VARCHAR NOT NULL UNIQUE,
+            display_name VARCHAR,
+            picture_url TEXT,
+            linked_at VARCHAR NOT NULL,
+            last_login_at VARCHAR NOT NULL,
+            FOREIGN KEY(student_id) REFERENCES students(id)
         );
     """)
     # เติมโค้ด 4 บรรทัดนี้เข้าไป เพื่อเพิ่มคอลัมน์ GPS และ OTP
@@ -239,6 +257,7 @@ def delete_room_source(source_id):
     if not cur.fetchone():
         conn.close(); return jsonify(error="ไม่พบห้องเรียน"), 404
     cur.execute("DELETE FROM attendance WHERE student_id IN (SELECT id FROM students WHERE source_id=%s)", (source_id,))
+    cur.execute("DELETE FROM student_line_accounts WHERE student_id IN (SELECT id FROM students WHERE source_id=%s)", (source_id,))
     cur.execute("DELETE FROM students WHERE source_id=%s", (source_id,))
     cur.execute("DELETE FROM room_sources WHERE id=%s", (source_id,))
     conn.commit(); conn.close()
@@ -453,36 +472,90 @@ if os.environ.get("DATABASE_URL"):
     init_db()
 @app.route("/student")
 def student_login_page():
-    return render_template("student_login.html")
+    return render_template("student_login.html", liff_id=LINE_LIFF_ID)
 
-@app.post("/api/student/login")
-def student_login_api():
+
+def verify_line_id_token(id_token):
+    if not LINE_LOGIN_CHANNEL_ID:
+        raise ValueError("ยังไม่ได้ตั้งค่า LINE_LOGIN_CHANNEL_ID")
+    body = urlencode({"id_token": id_token, "client_id": LINE_LOGIN_CHANNEL_ID}).encode("utf-8")
+    request_obj = Request(
+        "https://api.line.me/oauth2/v2.1/verify",
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urlopen(request_obj, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as err:
+        raise ValueError("LINE Login หมดอายุหรือไม่ถูกต้อง") from err
+
+
+@app.post("/api/student/line-auth")
+def student_line_auth():
     data = request.get_json(force=True)
-    student_id = data.get("student_id")
-    pin = data.get("pin")
-    
-    if not student_id or not pin:
-        return jsonify(error="กรุณากรอกข้อมูลให้ครบถ้วน"), 400
+    id_token = str(data.get("id_token", "")).strip()
+    student_code = str(data.get("student_code", "")).strip()
+    if not id_token:
+        return jsonify(error="ไม่พบข้อมูลยืนยันตัวตนจาก LINE"), 400
+    try:
+        line_profile = verify_line_id_token(id_token)
+    except (ValueError, URLError) as err:
+        return jsonify(error=str(err)), 401
+
+    line_user_id = line_profile.get("sub")
+    if not line_user_id:
+        return jsonify(error="LINE ไม่ส่งรหัสผู้ใช้กลับมา"), 401
 
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM students WHERE id=%s", (student_id,))
+    cur.execute("""SELECT s.* FROM student_line_accounts la
+        JOIN students s ON s.id=la.student_id WHERE la.line_user_id=%s""", (line_user_id,))
     student = cur.fetchone()
-    conn.close()
-
-    if not student:
-        return jsonify(error="ไม่พบข้อมูลนักเรียน"), 404
-
-    # เช็ครหัส 4 ตัวท้ายของ student_code (หรือถ้าสั้นกว่า 4 ตัวก็เทียบตรงๆ)
-    actual_code = str(student["student_code"])
-    last_4_digits = actual_code[-4:] if len(actual_code) >= 4 else actual_code
-    
-    if pin == last_4_digits:
+    now = datetime.now().isoformat(timespec="seconds")
+    if student:
+        cur.execute("""UPDATE student_line_accounts SET display_name=%s,picture_url=%s,last_login_at=%s
+            WHERE line_user_id=%s""", (line_profile.get("name"), line_profile.get("picture"), now, line_user_id))
+        conn.commit(); conn.close()
         session["student_id"] = student["id"]
         session["student_name"] = student["full_name"]
-        return jsonify(ok=True)
-        
-    return jsonify(error="รหัส 4 ตัวท้ายไม่ถูกต้อง"), 401
+        session["line_user_id"] = line_user_id
+        return jsonify(ok=True, linked=True, student_name=student["full_name"])
+
+    if not student_code:
+        conn.close()
+        return jsonify(ok=True, linked=False, needs_student_code=True,
+            line_name=line_profile.get("name"), picture=line_profile.get("picture"))
+
+    cur.execute("SELECT * FROM students WHERE student_code=%s", (student_code,))
+    student = cur.fetchone()
+    if not student:
+        conn.close(); return jsonify(error="ไม่พบรหัสนักเรียนนี้ในรายชื่อ"), 404
+    cur.execute("SELECT line_user_id FROM student_line_accounts WHERE student_id=%s", (student["id"],))
+    if cur.fetchone():
+        conn.close(); return jsonify(error="รหัสนักเรียนนี้ถูกผูกกับบัญชี LINE อื่นแล้ว กรุณาติดต่อผู้ดูแล"), 409
+
+    cur.execute("""INSERT INTO student_line_accounts(student_id,line_user_id,display_name,picture_url,linked_at,last_login_at)
+        VALUES (%s,%s,%s,%s,%s,%s)""",
+        (student["id"], line_user_id, line_profile.get("name"), line_profile.get("picture"), now, now))
+    conn.commit(); conn.close()
+    session["student_id"] = student["id"]
+    session["student_name"] = student["full_name"]
+    session["line_user_id"] = line_user_id
+    return jsonify(ok=True, linked=True, student_name=student["full_name"])
+
+@app.post("/api/student/login")
+def student_login_api():
+    return jsonify(error="กรุณาเข้าสู่ระบบผ่าน LINE"), 410
+
+
+@app.post("/api/student/logout")
+def student_logout():
+    session.pop("student_id", None)
+    session.pop("student_name", None)
+    session.pop("line_user_id", None)
+    return jsonify(ok=True)
 
 # สูตรคำนวณระยะทางระหว่างพิกัด GPS 2 จุด (หน่วยเป็นเมตร)
 def calculate_distance(lat1, lon1, lat2, lon2):

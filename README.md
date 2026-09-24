@@ -6,6 +6,7 @@
 
 ```bash
 pip install -r requirements.txt
+set DATABASE_URL=postgresql://user:password@host/database
 python app.py
 ```
 
@@ -25,7 +26,17 @@ python app.py
 
 1. อัปโหลดโฟลเดอร์นี้ไปยัง GitHub repository
 2. ใน Render เลือก **New → Blueprint** แล้วเลือก repository หรือสร้าง Web Service ด้วย `render.yaml`
-3. ใส่ `SHEET_URL` ใน Environment Variables เพื่อให้กดซิงก์ได้โดยไม่ต้องวางลิงก์ทุกครั้ง
-4. หากต้องการเก็บข้อมูลถาวรบน Render ให้เพิ่ม Persistent Disk และตั้ง `DATABASE_PATH` เป็น `/var/data/attendance.db`
+3. เชื่อม Render PostgreSQL แล้วกำหนด `DATABASE_URL`
+4. ตั้งค่า `ADMIN_PIN`, `SECRET_KEY` และค่า LINE ตามหัวข้อด้านล่าง
 
-> Render แบบไม่มี Persistent Disk จะล้างข้อมูลที่เช็กชื่อเมื่อ service ถูก deploy ใหม่หรือ restart
+## LINE Login สำหรับนักเรียน
+
+ระบบนักเรียนที่ `/student` ใช้ LIFF จาก LINE Login channel นักเรียนจะกรอกรหัสประจำตัวเพียงครั้งแรกเพื่อผูกบัญชี LINE จากนั้นระบบจะเข้าให้อัตโนมัติ
+
+ตั้งค่าบน Render:
+
+- `LINE_LIFF_ID` — LIFF ID จาก LINE Developers Console
+- `LINE_LOGIN_CHANNEL_ID` — Channel ID ของ LINE Login channel เดียวกับ LIFF
+- `SECRET_KEY` — ข้อความสุ่มยาวสำหรับเซสชัน (Blueprint จะสร้างให้ได้)
+
+ใน LINE Developers Console ให้สร้าง LIFF app โดยใช้ Endpoint URL เป็น `https://student-attemp.onrender.com/student` และเปิด scope `openid` กับ `profile` จากนั้นนำ LIFF URL ไปใส่ใน Rich Menu ของ LINE Official Account

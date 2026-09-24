@@ -1,61 +1,33 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>นักเรียนเข้าสู่ระบบ — Checkin Club</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>เข้าสู่ระบบด้วย LINE — Checkin Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    /* ปรับแต่งเพิ่มเติมให้เหมาะกับฟอร์มนักเรียน */
-    .login-card select {
-      width: 100%;
-      margin-top: 7px;
-      border: 1px solid #dce3e8;
-      border-radius: 10px;
-      background: #fff;
-      padding: 13px 15px;
-      font: 500 15px 'Noto Sans Thai', sans-serif;
-      outline-color: var(--blue);
-    }
-    .login-card select:disabled { background: #f4f6f8; color: #a1abb5; }
-    .mt-3 { margin-top: 15px; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='student_line.css', v='1') }}">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
-<body>
+<body data-liff-id="{{ liff_id }}">
   <main>
     <a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a>
-    <section class="login-card">
-      <div class="lock">🎓</div>
-      <p class="eyebrow">STUDENT PORTAL</p>
-      <h1>เข้าสู่ระบบ</h1>
-      <p class="sub">เลือกห้องเรียน ชื่อของตนเอง และกรอกเลขรหัสประจำตัว 4 ตัวท้ายเพื่อยืนยันตัวตน</p>
-      
-      <form id="studentForm">
-        <label>ห้องเรียน
-          <select id="roomSelect" required>
-            <option value="">— กำลังโหลดห้องเรียน —</option>
-          </select>
-        </label>
-        
-        <label class="mt-3">ชื่อ-นามสกุล
-          <select id="studentSelect" required disabled>
-            <option value="">— กรุณาเลือกห้องเรียนก่อน —</option>
-          </select>
-        </label>
-        
-        <label class="mt-3">รหัสผ่าน <small>(เลข 4 ตัวท้ายของรหัสนักเรียน)</small>
-          <input id="studentPin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required placeholder="• • • •">
-        </label>
-        
-        <button type="submit">ยืนยันตัวตน <span>→</span></button>
-      </form>
+    <section class="line-card">
+      <div class="line-mark">LINE</div>
+      <p class="eyebrow">STUDENT · LINE LOGIN</p>
+      <h1 id="title">กำลังเชื่อมต่อ LINE</h1>
+      <p class="sub" id="description">โปรดรอสักครู่ ระบบกำลังยืนยันบัญชีของคุณ</p>
+      <div class="loader" id="loader"><i></i><i></i><i></i></div>
+      <section id="linkPanel" class="link-panel" hidden>
+        <div class="profile"><img id="linePicture" alt=""><div><small>บัญชี LINE</small><b id="lineName">—</b></div></div>
+        <div class="first-time"><span>ครั้งแรกเท่านั้น</span><p>กรอกรหัสประจำตัวนักเรียนบนบัตรเพื่อผูกกับบัญชี LINE นี้ หลังจากนี้จะเข้าอัตโนมัติ</p></div>
+        <form id="linkForm">
+          <label>รหัสประจำตัวนักเรียน<input id="studentCode" name="student_code" autocomplete="off" inputmode="numeric" required placeholder="เช่น 65001"></label>
+          <button>ผูกบัญชีและเข้าสู่ระบบ <span>→</span></button>
+        </form>
+      </section>
+      <section id="errorPanel" class="error-panel" hidden><b>เชื่อมต่อไม่สำเร็จ</b><p id="errorMessage"></p><button id="retryButton">ลองอีกครั้ง</button></section>
+      <p class="privacy">ระบบใช้ LINE เพื่อยืนยันเจ้าของบัญชี และไม่เก็บรหัสผ่าน LINE ของคุณ</p>
     </section>
   </main>
-  
-  <script src="{{ url_for('static', filename='student_login.js') }}"></script>
-</body>
-</html>
+  <script src="{{ url_for('static', filename='student_line.js', v='1') }}"></script>
+</body></html>

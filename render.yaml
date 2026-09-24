@@ -7,10 +7,17 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
-      - key: DATABASE_PATH
-        value: /var/data/attendance.db
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PIN
+        sync: false
+      - key: LINE_LIFF_ID
+        sync: false
+      - key: LINE_LOGIN_CHANNEL_ID
+        sync: false
       - key: SHEET_URL
         sync: false
       - key: SHEET_GID
         value: "0"
-    
