@@ -14,8 +14,8 @@ from urllib.error import HTTPError, URLError
 from flask import Flask, jsonify, render_template, request, Response, redirect, session, url_for
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID", "")
-LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID", "")
+LINE_LIFF_ID = os.environ.get("LINE_LIFF_ID") or "2011719406-7A2NWysp"
+LINE_LOGIN_CHANNEL_ID = os.environ.get("LINE_LOGIN_CHANNEL_ID") or "2011719406"
 app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 app.secret_key = os.environ.get("SECRET_KEY", "replace-this-secret-before-public-deploy")
