@@ -1,6 +1,8 @@
 const $ = selector => document.querySelector(selector);
 const liffId = document.body.dataset.liffId;
 let currentIdToken = '';
+const nextPage = new URLSearchParams(window.location.search).get('next') === 'status'
+  ? '/student/status' : '/student/checkin';
 
 function showError(message) {
   $('#loader').hidden = true; $('#linkPanel').hidden = true; $('#errorPanel').hidden = false;
@@ -15,7 +17,7 @@ async function authenticate(studentCode = '') {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'ไม่สามารถยืนยันตัวตนได้');
-  if (result.linked) { window.location.replace('/student/checkin'); return; }
+  if (result.linked) { window.location.replace(nextPage); return; }
   $('#loader').hidden = true; $('#linkPanel').hidden = false;
   $('#title').textContent = 'ยืนยันรหัสนักเรียน';
   $('#description').textContent = 'ผูกครั้งเดียว แล้วครั้งถัดไป LINE จะพาเข้าให้อัตโนมัติ';

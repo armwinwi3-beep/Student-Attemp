@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>สถานะของฉัน — Checkin Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:#172232;--muted:#718095;--blue:#6678ff;--lime:#c8ff32;--cream:#f7f5ee;--line:#e5e8ed;--green:#179b62;--red:#dd4660;--orange:#df8b25}
+    *{box-sizing:border-box} body{margin:0;color:var(--ink);font-family:'Noto Sans Thai',sans-serif;background:radial-gradient(circle at 100% 0,#dcecff 0,transparent 38%),radial-gradient(circle at 0 100%,#efffc6 0,transparent 35%),var(--cream);min-height:100vh}
+    main{width:min(760px,calc(100% - 28px));margin:auto;padding:28px 0 54px}.brand{display:inline-flex;align-items:center;gap:9px;color:var(--ink);text-decoration:none;font:700 16px 'DM Mono',monospace}.brand i{font-style:normal;background:var(--ink);color:var(--lime);padding:6px 9px;border-radius:8px}.brand span{color:var(--blue)}
+    .hero{margin:34px 0 20px}.eyebrow{font:600 12px 'DM Mono',monospace;letter-spacing:1.4px;color:var(--blue);margin:0 0 8px}.hero h1{font-size:clamp(34px,8vw,58px);line-height:1;margin:0}.hero p{color:var(--muted);margin:12px 0 0}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}.stat{background:#fff;padding:17px;border-radius:18px;box-shadow:0 12px 30px #25314c10;border-top:4px solid var(--green)}.stat:nth-child(2){border-color:var(--orange)}.stat:nth-child(3){border-color:var(--red)}.stat b{font:700 28px 'DM Mono',monospace;display:block}.stat small{color:var(--muted)}
+    .card{background:#fff;border-radius:22px;box-shadow:0 18px 46px #25314c16;overflow:hidden}.row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}.row:last-child{border:0}.row h3{font-size:16px;margin:0 0 4px}.row p{margin:0;color:var(--muted);font-size:13px}.badge{font-weight:700;font-size:13px;padding:7px 11px;border-radius:999px;background:#e9f8f1;color:var(--green)}.badge.late{background:#fff3e2;color:var(--orange)}.badge.absent{background:#ffecef;color:var(--red)}
+    .empty{text-align:center;padding:52px 20px;color:var(--muted)}.actions{display:flex;gap:10px;margin-top:18px}.actions a{flex:1;text-align:center;text-decoration:none;font-weight:700;padding:13px;border-radius:12px;background:var(--ink);color:#fff}.actions a:first-child{background:var(--lime);color:var(--ink)}
+    @media(max-width:520px){.summary{grid-template-columns:1fr 1fr}.summary .stat:last-child{grid-column:1/-1}.row{padding:15px}.actions{flex-direction:column}}
+  </style>
+</head>
+<body><main>
+  <a class="brand" href="/"><i>✓</i> CHECKIN <span>CLUB</span></a>
+  <section class="hero"><p class="eyebrow">MY ATTENDANCE</p><h1>สถานะของฉัน</h1><p>{{ student_name }} · ประวัติ 30 รายการล่าสุด</p></section>
+  {% set present = attendance_rows|selectattr('status','equalto','present')|list|length %}
+  {% set late = attendance_rows|selectattr('status','equalto','late')|list|length %}
+  {% set absent = attendance_rows|selectattr('status','equalto','absent')|list|length %}
+  <section class="summary"><div class="stat"><b>{{ present }}</b><small>มา</small></div><div class="stat"><b>{{ late }}</b><small>สาย</small></div><div class="stat"><b>{{ absent }}</b><small>ขาด</small></div></section>
+  <section class="card">
+    {% for row in attendance_rows %}<article class="row"><div><h3>{{ row.name }}</h3><p>{{ row.event_date }}{% if row.checked_at %} · {{ row.checked_at[11:16] }} น.{% endif %}</p></div><span class="badge{% if row.status == 'late' %} late{% elif row.status == 'absent' %} absent{% endif %}">{{ {'present':'มา','late':'สาย','absent':'ขาด'}.get(row.status,row.status) }}</span></article>
+    {% else %}<div class="empty">ยังไม่มีประวัติการเข้าร่วมกิจกรรม</div>{% endfor %}
+  </section>
+  <nav class="actions"><a href="/student/checkin">เช็กชื่อกิจกรรม</a><a href="/student">รีเฟรชข้อมูล</a></nav>
+</main></body></html>

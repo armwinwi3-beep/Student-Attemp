@@ -574,6 +574,21 @@ def student_checkin_page():
         return redirect(url_for("student_login_page"))
     return render_template("student_checkin.html", student_name=session.get("student_name"))
 
+
+@app.route("/student/status")
+def student_status_page():
+    student_id = session.get("student_id")
+    if not student_id:
+        return redirect(url_for("student_login_page", next="status"))
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""SELECT e.name, e.event_date, a.status, a.checked_at
+        FROM attendance a JOIN events e ON e.id=a.event_id
+        WHERE a.student_id=%s ORDER BY e.event_date DESC, a.checked_at DESC LIMIT 30""", (student_id,))
+    attendance_rows = cur.fetchall()
+    conn.close()
+    return render_template("student_status.html", student_name=session.get("student_name"), attendance_rows=attendance_rows)
+
 @app.post("/api/student/submit_checkin")
 def student_submit_checkin():
     data = request.get_json(force=True)
